@@ -1,14 +1,16 @@
-# Dockerfile for Spring Boot app
-FROM eclipse-temurin:17-jdk-alpine
-
-# Set working directory
+# ---- Build stage ----
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Copy all project files
-COPY . .
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Build project using Maven wrapper
-RUN ./mvnw clean package -DskipTests
+# ---- Runtime stage ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 
-# Run the JAR
-ENTRYPOINT ["java","-jar","target/*.jar"]
+EXPOSE 10000
+ENTRYPOINT ["java", "-jar", "app.jar"]
